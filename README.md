@@ -16,6 +16,6 @@ sudo kismet -c 'wlan0:type=linuxwifi,channels="1W5,2W5,3W5,4W5,5W5,6W5,7W5,8W5,9
 #### DJI OUIs
 - 60:60:1F
 - 48:1C:B9
-- 48:1C:B9
+- 34:D2:62
 
 
