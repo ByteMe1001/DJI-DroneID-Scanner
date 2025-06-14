@@ -3,6 +3,7 @@
 
 # Project Specific
 hex.txt
+test.pcap
 
 # User-specific stuff
 .idea/**/workspace.xml

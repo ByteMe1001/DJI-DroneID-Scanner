@@ -1,6 +1,7 @@
 import struct
-from datetime import datetime, UTC
-from zoneinfo import ZoneInfo
+from typing import Optional
+from parser import Parser
+from droneID_model import DroneIDPacketModel
 
 DRONEID_DRONE_TYPES = {
     "1": "Inspire 1",
@@ -54,175 +55,129 @@ DRONEID_DRONE_TYPES = {
     "70": "Mini SE"
 }
 
-
 # Contains the OUI 26:37:12
-class DroneIDPacket:
-    def __init__(self, hex_str):
-        self.data = bytes.fromhex(hex_str)
-        self.packet_len = self.data[0]
-        self.unknown_val = self.data[1]
-        self.packet_type = self.data[3]
-        self.version_desc = "N/A"
-
-    def print_header(self):
-        print("Packet Header:")
-        print(f"  Packet Length      : {self.packet_len:02x} in hex → {self.packet_len}")
-        print(f"  Unknown Field      : {self.unknown_val:02x} → {self.unknown_val}")
-        print(f"  DroneID Packet Type: {self.packet_type:02x} → {self.__class__.__name__}")
-
-    # def print_coord(self, label, raw_bytes, raw_val, value):
-    #     print(f"\n{label}:")
-    #     print(f"  Raw bytes      : {' '.join(f'{b:02x}' for b in raw_bytes)}")
-    #     print(f"  Little-endian  : 0x{raw_val:08x} = {raw_val}")
-    #     print(f"  Converted value: {value:.6f}")
-
-    # This fields are all unsigned integer in 32bits -> 4 bytes
-    def le_uint32(self, b):
+class DroneIDPacketParser(Parser):
+    oui = ["26:37:12", "60:60:1F", "48:1C:B9", "34:D2:62"]
+    @staticmethod
+    def _le_uint32(b):
         return struct.unpack("<I", b)[0]
-
-    # This fields are all unsigned integer in 16bits -> 2 bytes
-    def le_int16(self, b):
+    @staticmethod
+    def _le_int16(b):
         return struct.unpack("<h", b)[0]
+    @staticmethod
+    def _le_uint64(b):
+        return struct.unpack("<Q", b)[0]
+    @staticmethod
+    def _to_coord(val):
+        return round(val / 174533.0, 6)
+    @staticmethod
+    def _to_speed(val):
+        return round(val / 100.0, 2)
+    @staticmethod
+    def _to_alt(val):
+        return round(val / 3.281, 2)
+    @staticmethod
+    def _to_yaw(val):
+        return round(val / 100.0, 2)
+    @staticmethod
+    def _decode_serial(b):
+        return b.decode('ascii', errors='replace').rstrip('\x00')
 
+    @staticmethod
+    def parse_header(data: bytes) -> tuple[int, int] | None:
+        if len(data) < 5:
+            return None
+        return data[3], data[4]  # packet_type, version
 
-class DroneIDPacketFlight(DroneIDPacket):
-    def __init__(self, hex_str):
-        super().__init__(hex_str)
-        self.version = self.data[4]
-        self.version_desc = {
-            0x01: "V1",
-            0x02: "V2"
-        }.get(self.version, f"Unknown (0x{self.version:02x})")
-        self.parse()
+    @staticmethod
+    def parse_version_flight(data: bytes) -> DroneIDPacketModel:
+        serial = DroneIDPacketParser._decode_serial(data[9:25])
+        drone_lon = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[25:29]))
+        drone_lat = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[29:33]))
+        alt = DroneIDPacketParser._to_alt(DroneIDPacketParser._le_int16(data[33:35]))
+        height = DroneIDPacketParser._to_alt(DroneIDPacketParser._le_int16(data[35:37]))
+        x = DroneIDPacketParser._to_speed(DroneIDPacketParser._le_int16(data[37:39]))
+        y = DroneIDPacketParser._to_speed(DroneIDPacketParser._le_int16(data[39:41]))
+        z = DroneIDPacketParser._to_speed(DroneIDPacketParser._le_int16(data[41:43]))
+        yaw = DroneIDPacketParser._to_yaw(DroneIDPacketParser._le_int16(data[43:45]))
+        gps_raw = DroneIDPacketParser._le_uint64(data[45:53]) / 1000.0
+        pilot_lat = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[53:57]))
+        pilot_lon = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[57:61]))
+        home_lon = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[61:65]))
+        home_lat = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[65:69]))
+        drone_type_id = data[69]
+        drone_type = DRONEID_DRONE_TYPES.get(str(drone_type_id), f"Unknown (ID: {drone_type_id})")
 
-    def parse(self):
+        return DroneIDPacketModel(
+            serial_number=serial,
+            drone_lat=drone_lat,
+            drone_lon=drone_lon,
+            altitude_m=alt,
+            height_m=height,
+            x_speed_mps=x,
+            y_speed_mps=y,
+            z_speed_mps=z,
+            yaw_deg=yaw,
+            gps_time=gps_raw,
+            pilot_lat=pilot_lat,
+            pilot_lon=pilot_lon,
+            home_lat=home_lat,
+            home_lon=home_lon,
+            drone_type=drone_type
+        )
 
-        self.sequence_number = self.data[5]
-        self.state_info = self.data[6]
-        self.serial_number = self.data[9:25].decode("ascii", errors="replace").rstrip('\x00')   # Strip any trailing null bytes
+    @staticmethod
+    def parse_version_license(data: bytes) -> None:
+        # Placeholder for license parser (0x11)
+        return None
 
-        # Drone location (after serial)
-        self.drone_lon_bytes = self.data[25:29]
-        self.drone_lat_bytes = self.data[29:33]
-        self.drone_lon_raw = self.le_uint32(self.drone_lon_bytes)
-        self.drone_lat_raw = self.le_uint32(self.drone_lat_bytes)
-        self.drone_lon = self.drone_lon_raw / 174533.0
-        self.drone_lat = self.drone_lat_raw / 174533.0
+    @staticmethod
+    def parse(hex_str: str) -> DroneIDPacketModel | None:
+        try:
+            data = bytes.fromhex(hex_str.strip())
+            header = DroneIDPacketParser.parse_header(data)
+            if header is None:
+                return None
 
-        # Altitude and Height (2 bytes each)
-        self.altitude_bytes = self.data[33:35]
-        self.height_bytes = self.data[35:37]
-        self.altitude_raw = self.le_int16(self.altitude_bytes)
-        self.height_raw = self.le_int16(self.height_bytes)
-        self.altitude = round(self.altitude_raw / 3.281, 2)  # ft → m
-        self.height = round(self.height_raw / 3.281, 2)  # ft → m
+            ptype, version = header
 
-        # Speed (X, Y, Z) — 2 bytes each
-        self.x_speed_bytes = self.data[37:39]
-        self.y_speed_bytes = self.data[39:41]
-        self.z_speed_bytes = self.data[41:43]
-        self.x_speed_raw = self.le_int16(self.x_speed_bytes)
-        self.y_speed_raw = self.le_int16(self.y_speed_bytes)
-        self.z_speed_raw = self.le_int16(self.z_speed_bytes)
+            if ptype == 0x10:
+                return DroneIDPacketParser.parse_version_flight(data)
+            elif ptype == 0x11:
+                return DroneIDPacketParser.parse_version_license(data)
+            else:
+                return None
+        except Exception as e:
+            print(f"[!] Failed to parse DroneID packet: {e}")
+            return None
 
-        self.x_speed = round(self.x_speed_raw / 100.0, 2)  # cm/s → m/s
-        self.y_speed = round(self.y_speed_raw / 100.0, 2)
-        self.z_speed = round(self.z_speed_raw / 100.0, 2)
+    @staticmethod
+    def from_wifi(packet: bytes, oui: str) -> Optional[DroneIDPacketModel]:
+        """
+        Converts the packet bytes to a hex string and parses it using the standard parser.
 
-        # Yaw Angle (2 bytes, signed)
-        self.yaw_bytes = self.data[43:45]
-        self.yaw_raw = self.le_int16(self.yaw_bytes)
-        self.yaw_angle = round(self.yaw_raw / 100.0, 2)  # Assuming it's in centi-degrees
+        Args:
+            packet (bytes): The raw vendor-specific Wi-Fi payload.
+            oui (str): The expected OUI in the form "26:37:12".
 
-        # Pilot GPS clock time (8 bytes, little-endian unsigned 64-bit int)
-        self.pilot_gps_time_bytes = self.data[45:53]
-        self.pilot_gps_time_raw = struct.unpack("<Q", self.pilot_gps_time_bytes)[0] / 1000.0 # <Q = little-endian unsigned long long
+        Returns:
+            Optional[DroneIDPacketModel]: Parsed model or None if the OUI doesn't match or parsing fails.
+        """
+        try:
+            # Strip first 3 OUI bytes
+            stripped = packet[3:]
 
-        self.pilot_gps_time = datetime.fromtimestamp(self.pilot_gps_time_raw, UTC)
-
-        # Convert UTC datetime to Singapore timezone
-        self.pilot_gps_time_local = self.pilot_gps_time.astimezone(ZoneInfo("Asia/Singapore"))
-
-        # Format the local time as "13 Jun 2025, 03:45 AM"
-        self.pilot_gps_time_formatted = self.pilot_gps_time_local.strftime("%d %b %Y, %I:%M %p")
-
-        self.app_lat_bytes = self.data[53:57]
-        self.app_lon_bytes = self.data[57:61]
-        self.app_lat_raw = self.le_uint32(self.app_lat_bytes)
-        self.app_lon_raw = self.le_uint32(self.app_lon_bytes)
-        self.app_lat = self.app_lat_raw / 174533.0
-        self.app_lon = self.app_lon_raw / 174533.0
-
-        self.home_lon_bytes = self.data[61:65]
-        self.home_lat_bytes = self.data[65:69]
-        self.home_lat_raw = self.le_uint32(self.home_lat_bytes)
-        self.home_lon_raw = self.le_uint32(self.home_lon_bytes)
-        self.home_lat = self.home_lat_raw / 174533.0
-        self.home_lon = self.home_lon_raw / 174533.0
-
-        # Drone Type ID (1 byte after pilot latitude)
-        self.drone_type_id = self.data[69]
-        self.drone_type = DRONEID_DRONE_TYPES.get(str(self.drone_type_id), f"Unknown (ID: {self.drone_type_id})")
-
-    def print_packet_info(self):
-        print(f"  Sequence Number    : {self.sequence_number:02x} → {self.sequence_number}")
-        print(f"  State Information  : {self.state_info:02x} → {self.state_info}")
-        print(f"  Serial Number      : {self.serial_number}")
-
-    def print_drone_telemetry(self):
-        self.print_coord("Drone Latitude", self.drone_lat_bytes, self.drone_lat_raw, self.drone_lat)
-        self.print_coord("Drone Longitude", self.drone_lon_bytes, self.drone_lon_raw, self.drone_lon)
-        print(f"\nAltitude (ft→m): {self.altitude_raw} ft → {self.altitude} m")
-        print(f"Height   (ft→m): {self.height_raw} ft → {self.height} m")
-        print(f"\nX Speed: {self.x_speed_raw} cm/s → {self.x_speed} m/s")
-        print(f"Y Speed: {self.y_speed_raw} cm/s → {self.y_speed} m/s")
-        print(f"Z Speed: {self.z_speed_raw} cm/s → {self.z_speed} m/s")
-        print(f"\nYaw Angle: {self.yaw_raw} (×0.01°) → {self.yaw_angle}°")
-        print(f"\nPilot GPS Time:")
-        print(f"  Epoch Seconds : {self.pilot_gps_time_raw}")
-        print(f"  UTC Timestamp : {self.pilot_gps_time.isoformat()}")
-        print(f"  Singapore Time: {self.pilot_gps_time_formatted}")
-
-    def print_coord(self, label, raw_bytes, raw_val, value):
-        print(f"\n{label}:")
-        print(f"  Raw bytes      : {' '.join(f'{b:02x}' for b in raw_bytes)}")
-        print(f"  Little-endian  : 0x{raw_val:08x} = {raw_val}")
-        print(f"  Converted value: {value:.6f}")
-
-    def print_info(self):
-        self.print_header()
-        print(f"  Flight Info Version: {self.version:02x} → {self.version_desc}")
-        self.print_packet_info()
-        self.print_drone_telemetry()
-        self.print_coord("App Latitude", self.app_lat_bytes, self.app_lat_raw, self.app_lat)
-        self.print_coord("App Longitude", self.app_lon_bytes, self.app_lon_raw, self.app_lon)
-        self.print_coord("Home Latitude", self.home_lat_bytes, self.home_lat_raw, self.home_lat)
-        self.print_coord("Home Longitude", self.home_lon_bytes, self.home_lon_raw, self.home_lon)
-        print(f"\nDrone Type     : {self.drone_type}")
-
-
-class DroneIDPacketLicense(DroneIDPacket):
-    def __init__(self, hex_str):
-        super().__init__(hex_str)
-        # Placeholder: real license info parsing would go here
-
-    def print_info(self):
-        self.print_header()
-        print("  License Info: (parsing not yet implemented)")
-
+            # Convert to hex string
+            hex_str = stripped.hex()
+            return DroneIDPacketParser.parse(hex_str)
+        except Exception as e:
+            print(f"[!] from_wifi error: {e}")
+            return None
 
 if __name__ == "__main__":
     with open("hex.txt", "r") as file:
         hex_str = file.read().strip().replace(" ", "").replace("\n", "")
-
-
-    packet_type = bytes.fromhex(hex_str)[3]
-
-    if packet_type == 0x10:
-        packet = DroneIDPacketFlight(hex_str)
-    elif packet_type == 0x11:
-        packet = DroneIDPacketLicense(hex_str)
-    else:
-        raise ValueError(f"Unsupported packet type: 0x{packet_type:02x}")
-
-    packet.print_info()
+    # Parse the DroneID packet from the hex string
+    packet = DroneIDPacketParser.parse(hex_str)
+    if packet:
+        print(packet.model_dump_json(indent=2))
