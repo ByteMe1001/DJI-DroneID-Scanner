@@ -4,6 +4,9 @@
 # Project Specific
 hex.txt
 test.pcap
+password.txt
+
+/uploads
 
 # User-specific stuff
 .idea/**/workspace.xml

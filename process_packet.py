@@ -3,20 +3,25 @@ import logging
 from scapy.layers.dot11 import Dot11EltVendorSpecific
 from scapy.packet import Packet
 
+from extensions import socketio        # No circular import
+
 # Local files in the same directory
 from parser_service import ParserService
 
 from typing import List
 from pydantic import BaseModel
 
+
 LOG = logging.getLogger(__name__)
-#
+LOG.setLevel(logging.DEBUG)
+
+# For buffering
 # # Time-buffered batch saving for database
 # time_buffer = TimeBuffer(interval_seconds=1, on_flush=save_messages)
 #
 # # Time-buffered batch broadcasting to WebSocket
 # time_buffer_ws = TimeBuffer(interval_seconds=0.1, on_flush=broadcast)
-#
+
 
 def process_packet(packet: Packet) -> None:
     """
@@ -39,6 +44,11 @@ def process_packet(packet: Packet) -> None:
             parsed_message = ParserService.dispatch_vendor_parser(vendor_spec.info)
             if parsed_message:
                 LOG.debug(f"Parsed message: {parsed_message}")
+                # Push to websocket
+                try:
+                    socketio.emit('update_drone', parsed_message.to_payload())
+                except Exception as e:
+                    LOG.warning(f"WebSocket emit failed: {e}")
             break  # Only handle one vendor element per packet
         else:
             # incase there are multiple vendor-specific elements in the same packet

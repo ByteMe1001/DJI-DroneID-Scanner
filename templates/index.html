@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drone Map</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 80vh; width: 100%; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <!--Dog Photo-->
+    <img src="{{ url_for('static', filename='dog.jpg') }}" alt="Dog"
+     style="float: right; max-width: 250px; margin-left: 1rem; margin-top: -10px; margin-bottom: 1rem; border-radius: 8px;">
+
+    <h2>Dog Sniffer Dashboard</h2>
+
+    <!-- PCAP Upload -->
+    <form id="pcapForm" enctype="multipart/form-data">
+        <input type="file" name="pcap_file" accept=".pcap">
+        <button type="submit">Upload PCAP</button>
+    </form>
+
+    <!-- Live Control Buttons -->
+    <button onclick="startLive()">Start Live Sniffing</button>
+    <button onclick="stopSniff()">Stop Sniffing</button>
+
+    <!-- Status & Map -->
+    <div id="status">Status: </div>
+    <div id="map"></div>
+
+    <!-- JS dependencies -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>
+

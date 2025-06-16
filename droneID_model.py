@@ -19,10 +19,20 @@ class DroneIDPacketModel(BaseModel, MessageModel):
     home_lon: float
     drone_type: str
 
-    # To amend this abstract function
+    # For string printing only
     def __str__(self):
         return (
             f"[{self.provider}] {self.drone_type} (S/N: {self.serial_number}) "
             f"at ({self.drone_lat}, {self.drone_lon}) "
             f"Pilot Location: ({self.pilot_lat}, {self.pilot_lon})"
         )
+
+    # Payload for WebSocket or JSON API
+    def to_payload(self) -> dict:
+        return {
+            "drone_sn": self.serial_number,
+            "drone_lat": self.drone_lat,
+            "drone_lon": self.drone_lon,
+            "pilot_lat": self.pilot_lat,
+            "pilot_lon": self.pilot_lon,
+        }

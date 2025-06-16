@@ -13,6 +13,11 @@ class MessageModel(ABC):
     def __str__(self):
         pass
 
+    @abstractmethod
+    def to_payload(self) -> dict:
+        """Return the message as a dictionary suitable for WebSocket."""
+        pass
+
 
 class Parser:
     """
