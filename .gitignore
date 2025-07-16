@@ -2,9 +2,9 @@
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 # Project Specific
-hex.txt
+files/hex.txt
 test.pcap
-password.txt
+files/password.txt
 
 /uploads
 

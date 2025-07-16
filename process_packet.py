@@ -6,7 +6,7 @@ from scapy.packet import Packet
 from extensions import socketio        # No circular import
 
 # Local files in the same directory
-from parser_service import ParserService
+from parser_manager import ParserService
 
 from typing import List
 from pydantic import BaseModel

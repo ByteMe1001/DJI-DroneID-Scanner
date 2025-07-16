@@ -175,9 +175,21 @@ class DroneIDPacketParser(Parser):
             return None
 
 if __name__ == "__main__":
-    with open("hex.txt", "r") as file:
+    with open("files/hex.txt", "r") as file:
         hex_str = file.read().strip().replace(" ", "").replace("\n", "")
     # Parse the DroneID packet from the hex string
     packet = DroneIDPacketParser.parse(hex_str)
     if packet:
+        bytes_per_row = 16
+        hex_bytes = [hex_str[i:i + 2] for i in range(0, len(hex_str), 2)]
+
+        # Create hex map
+        for i in range(0, len(hex_bytes), bytes_per_row):
+            chunk = hex_bytes[i:i + bytes_per_row]
+            # Hex part
+            hex_part = " ".join(chunk)
+            # ASCII part (printable chars or '.')
+            ascii_part = "".join([chr(int(b, 16)) if 32 <= int(b, 16) <= 126 else '.' for b in chunk])
+            print(f"{i:08x}  {hex_part:<47}  {ascii_part}")
+
         print(packet.model_dump_json(indent=2))

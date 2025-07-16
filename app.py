@@ -16,7 +16,7 @@ logging.basicConfig(
 
 app = Flask(__name__)
 socketio.init_app(app)
-
+print(f"SocketIO async_mode: {socketio.async_mode}")
 # In-memory store for demonstration
 drone_messages = {}
 
@@ -44,7 +44,7 @@ def start_sniffing():
     if mode == 'live':
 
         # Read password from password.txt
-        with open('password.txt', 'r') as f:
+        with open('files/password.txt', 'r') as f:
             password = f.read().strip()
 
         sniffer_instance = SniffManager(process_packet)
@@ -139,5 +139,11 @@ signal.signal(signal.SIGINT, handle_termination)
 signal.signal(signal.SIGTERM, handle_termination)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+#     socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
 
+    socketio.run(app, host='0.0.0.0', port=5050, allow_unsafe_werkzeug=True)
+
+# if __name__ == '__main__':
+#     from waitress import serve  # Optional: production-ready alternative to Werkzeug
+#     # socketio.run(app, debug=False)  # Werkzeug, used by default
+#     serve(app, host="0.0.0.0", port=5000)  # Use this line for production-ready `.exe`

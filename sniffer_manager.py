@@ -1,11 +1,9 @@
-import time
 import logging
-import os
 import threading
 import signal
 import subprocess
 
-from scapy.layers.dot11 import Dot11Elt, Dot11EltVendorSpecific, Dot11, RadioTap
+from scapy.layers.dot11 import RadioTap
 from scapy.sendrecv import AsyncSniffer
 from typing import Callable, Optional
 from controller import SSHController
@@ -119,7 +117,7 @@ class WiFiInterfaceSniffer:
         """
         LOG.info("Starting packet processing loop...")
 
-        writer = PcapWriter("test_output.pcap", append=True, sync=True)
+        writer = PcapWriter("files/test_output.pcap", append=True, sync=True)
         try:
             for pkt_data, _ in RawPcapReader(self.proc):
                 if not self.running:
