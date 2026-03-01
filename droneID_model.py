@@ -36,4 +36,10 @@ class DroneIDPacketModel(BaseModel, MessageModel):
             "drone_lon": self.drone_lon,
             "pilot_lat": self.pilot_lat,
             "pilot_lon": self.pilot_lon,
+            "altitude_m": self.altitude_m,
+            "height_m": self.height_m,
+            "x_speed_mps": self.x_speed_mps,
+            "y_speed_mps": self.y_speed_mps,
+            "z_speed_mps": self.z_speed_mps,
+            "drone_type": self.drone_type,
         }

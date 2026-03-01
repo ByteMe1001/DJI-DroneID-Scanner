@@ -4,36 +4,44 @@
     <title>Drone Map</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        #map { height: 80vh; width: 100%; margin-bottom: 1rem; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
+<style>
+    #map { height: 80vh; width: 100%; margin-bottom: 1rem; }
+</style>
 <body>
-    <!--Dog Photo-->
-    <img src="{{ url_for('static', filename='dog.jpg') }}" alt="Dog"
-     style="float: right; max-width: 250px; margin-left: 1rem; margin-top: -10px; margin-bottom: 1rem; border-radius: 8px;">
+    <div class="container">
+        <h2 class="header-title">
+            <img src="{{ url_for('static', filename='dog.png') }}" alt="Dog" class="header-icon">
+            DroneID Sniffer Dashboard
+        </h2>
 
-    <h2>Dog Sniffer Dashboard</h2>
-<!--    <h2>DroneID Sniffer Dashboard</h2>-->
+        <!-- Upload Section -->
+        <div class="card">
+            <h4>Upload PCAP File</h4>
+            <form id="pcapForm" enctype="multipart/form-data" class="form-inline">
+                <input type="file" name="pcap_file" accept=".pcap">
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </form>
+        </div>
 
-    <!-- PCAP Upload -->
-    <form id="pcapForm" enctype="multipart/form-data">
-        <input type="file" name="pcap_file" accept=".pcap">
-        <button type="submit">Upload PCAP</button>
-    </form>
+        <!-- Controls -->
+        <div class="card">
+            <button class="btn btn-success" onclick="startLive()">Start Live Sniffing</button>
+            <button class="btn btn-danger" onclick="stopSniff()">Stop Sniffing</button>
+            <span id="status" class="status">Status: Idle</span>
+        </div>
 
-    <!-- Live Control Buttons -->
-    <button onclick="startLive()">Start Live Sniffing</button>
-    <button onclick="stopSniff()">Stop Sniffing</button>
+        <!-- Map -->
+        <div class="card">
+            <div id="map"></div>
+        </div>
+    </div>
 
-    <!-- Status & Map -->
-    <div id="status">Status: </div>
-    <div id="map"></div>
-
-    <!-- JS dependencies -->
+    <!-- Scripts -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
 

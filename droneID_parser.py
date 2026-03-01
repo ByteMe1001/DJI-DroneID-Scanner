@@ -59,11 +59,14 @@ DRONEID_DRONE_TYPES = {
 class DroneIDPacketParser(Parser):
     oui = ["26:37:12", "60:60:1F", "48:1C:B9", "34:D2:62"]
     @staticmethod
-    def _le_uint32(b):
-        return struct.unpack("<I", b)[0]
+    def _le_int32(b):
+        return struct.unpack("<i", b)[0]
     @staticmethod
     def _le_int16(b):
         return struct.unpack("<h", b)[0]
+    @staticmethod
+    def _le_uint16(b):
+        return struct.unpack("<H", b)[0]
     @staticmethod
     def _le_uint64(b):
         return struct.unpack("<Q", b)[0]
@@ -75,7 +78,7 @@ class DroneIDPacketParser(Parser):
         return round(val / 100.0, 2)
     @staticmethod
     def _to_alt(val):
-        return round(val / 3.281, 2)
+        return round(val / 10, 2)
     @staticmethod
     def _to_yaw(val):
         return round(val / 100.0, 2)
@@ -92,19 +95,19 @@ class DroneIDPacketParser(Parser):
     @staticmethod
     def parse_version_flight(data: bytes) -> DroneIDPacketModel:
         serial = DroneIDPacketParser._decode_serial(data[9:25])
-        drone_lon = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[25:29]))
-        drone_lat = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[29:33]))
-        alt = DroneIDPacketParser._to_alt(DroneIDPacketParser._le_int16(data[33:35]))
-        height = DroneIDPacketParser._to_alt(DroneIDPacketParser._le_int16(data[35:37]))
+        drone_lon = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_int32(data[25:29]))
+        drone_lat = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_int32(data[29:33]))
+        alt = DroneIDPacketParser._to_alt(DroneIDPacketParser._le_uint16(data[33:35]))
+        height = DroneIDPacketParser._to_alt(DroneIDPacketParser._le_uint16(data[35:37]))
         x = DroneIDPacketParser._to_speed(DroneIDPacketParser._le_int16(data[37:39]))
         y = DroneIDPacketParser._to_speed(DroneIDPacketParser._le_int16(data[39:41]))
         z = DroneIDPacketParser._to_speed(DroneIDPacketParser._le_int16(data[41:43]))
         yaw = DroneIDPacketParser._to_yaw(DroneIDPacketParser._le_int16(data[43:45]))
         gps_raw = DroneIDPacketParser._le_uint64(data[45:53]) / 1000.0
-        pilot_lat = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[53:57]))
-        pilot_lon = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[57:61]))
-        home_lon = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[61:65]))
-        home_lat = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_uint32(data[65:69]))
+        pilot_lat = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_int32(data[53:57]))
+        pilot_lon = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_int32(data[57:61]))
+        home_lon = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_int32(data[61:65]))
+        home_lat = DroneIDPacketParser._to_coord(DroneIDPacketParser._le_int32(data[65:69]))
         drone_type_id = data[69]
         drone_type = DRONEID_DRONE_TYPES.get(str(drone_type_id), f"Unknown (ID: {drone_type_id})")
 

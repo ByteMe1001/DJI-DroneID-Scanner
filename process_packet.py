@@ -15,14 +15,6 @@ from pydantic import BaseModel
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
 
-# For buffering
-# # Time-buffered batch saving for database
-# time_buffer = TimeBuffer(interval_seconds=1, on_flush=save_messages)
-#
-# # Time-buffered batch broadcasting to WebSocket
-# time_buffer_ws = TimeBuffer(interval_seconds=0.1, on_flush=broadcast)
-
-
 def process_packet(packet: Packet) -> None:
     """
     Filters Wi-Fi packets and processes vendor-specific elements that match known OUIs.
@@ -66,24 +58,3 @@ def _get_vendor_specific(packet: Packet) -> Dot11EltVendorSpecific:
         Dot11EltVendorSpecific | None: Vendor-specific IE if present.
     """
     return packet.getlayer(Dot11EltVendorSpecific) if packet.haslayer(Dot11EltVendorSpecific) else None
-
-
-# def _save_db_models(db_models: List[BaseModel]) -> None:
-#     """Saves parsed messages to the database with throttling."""
-#     for model in db_models:
-#         time_buffer.add(model)
-#
-#
-# def _broadcast_location(db_models: List[BaseModel]) -> None:
-#     """Sends location-related messages to the websocket."""
-#     for model in db_models:
-#         if isinstance(model, DjiMessage):
-#             time_buffer_ws.add(MinimalDroneDto(
-#                 sender_id=model.sender_id,
-#                 position=Position(lat=model.dji_latitude, lng=model.dji_longitude)
-#             ))
-#         elif isinstance(model, LocationMessage):
-#             time_buffer_ws.add(MinimalDroneDto(
-#                 sender_id=model.sender_id,
-#                 position=Position(lat=model.latitude, lng=model.longitude)
-#             ))

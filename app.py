@@ -2,8 +2,11 @@ import logging
 import os
 import signal
 import sys
+from datetime import datetime
 
 from flask import Flask, render_template, request, redirect
+from flask_socketio import emit
+
 from extensions import socketio  # no circular import
 from process_packet import process_packet
 from sniffer_manager import SniffManager
@@ -79,7 +82,7 @@ def stop_sniffing():
     global sniffer_started, sniffer_instance
 
     if sniffer_started and sniffer_instance:
-        sniffer_instance.stop()
+        sniffer_instance.shutdown()
         sniffer_instance = None
         sniffer_started = False
         return {"status": "stopped"}, 200
